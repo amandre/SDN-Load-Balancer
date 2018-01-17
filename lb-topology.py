@@ -14,7 +14,7 @@ Ryu controller sends commands concerning free capacities on links and the CPU us
                     s0
                     |
                     | 10.0.0.99/8
-                   nat
+                   nat0
                     | 192.168.99.99/24
                     |
                     s1
@@ -44,24 +44,24 @@ def create_topo():
     nat = net.addHost('nat0', cls=NAT, subnet='192.168.99.0/24', ip='10.0.0.99', inetIntf=host_int, localIntf=srv_int)
     net.addLink(nat, switches[0], bw=50, intfName1=host_int)
     net.addLink(nat, switches[1], bw=50, intfName1=srv_int)
-    nat.setIP('192.168.99.99',24,srv_int)  
+    nat.setIP('192.168.99.99', 24, srv_int)
 
+    private_dirs = [ '/var/log', '/var/run', '/etc/sdn/' ]
     hosts = []
     for i in range(5):
-        hosts.append(net.addHost('h{}'.format(i+1), ip='10.0.0.{}/24'.format(i+1), cpu=0.05, defaultRoute='via 10.0.0.99'))
+        hosts.append(net.addHost('h{}'.format(i+1), ip='10.0.0.{}/24'.format(i+1), cpu=0.05, defaultRoute='via 10.0.0.99', privateDirs=private_dirs))
         net.addLink(hosts[i], switches[0], bw=10)
         hosts[i].cmd('route add default dev h{}-eth0'.format(i+1))
 
     servers = []
     for i in range(3):
-        servers.append(net.addHost('srv{}'.format(i+1), ip='192.168.99.{}/24'.format(i+1), cpu=0.05, defaultRoute='via 192.168.99.99'))
+        servers.append(net.addHost('srv{}'.format(i+1), ip='192.168.99.{}/24'.format(i+1), cpu=0.05, defaultRoute='via 192.168.99.99', privateDirs=private_dirs))
         net.addLink(servers[i], switches[1], bw=10)
-        servers[i].cmd('truncate -s 1m 1mb_from_srv1.file &') if i == 0 else servers[i].cmd('truncate -s {0}m {0}mb_from_srv{0}.file &'.format((i+1)*10))
-        servers[i].cmd('python -m SimpleHTTPServer 8080 &')
+        servers[i].cmd('truncate -s 1m /etc/sdn/1mb_from_srv{0}.file'.format(i+1)) if i==0 else servers[i].cmd('truncate -s {0}m ~/sdn/srv{1}/{0}mb_from_srv{1}.file'.format((i+1)*10,(i+1)))
+        servers[i].cmd('cd /etc/sdn/ |  python -m SimpleHTTPServer 8080 &')
         servers[i].cmd('route add default dev srv{}-eth0'.format(i+1))
 
     c0 = net.addController('c0', controller=RemoteController, ip='192.168.152.137', port=6633)
-
     net.build()
     c0.start()
     switches[0].start([c0])
