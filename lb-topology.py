@@ -60,7 +60,7 @@ def create_topo():
         servers[i].cmd('truncate -s 1m /etc/sdn/1mb_from_srv{0}.file'.format(i+1)) if i==0 else servers[i].cmd('truncate -s {0}m ~/sdn/srv{1}/{0}mb_from_srv{1}.file'.format((i+1)*10,(i+1)))
         servers[i].cmd('cd /etc/sdn/ |  python -m SimpleHTTPServer 8080 &')
         servers[i].cmd('route add default dev srv{}-eth0'.format(i+1))
-
+        servers[i].cmd('(while sleep 1; do (ps --no-headers -p $(pgrep -f mininet:srv{0} | head -1) -o %cpu > /etc/sdn/cpu_srv{0}) ; done) &'.format(i+1))
     c0 = net.addController('c0', controller=RemoteController, ip='192.168.152.137', port=6633)
     net.build()
     c0.start()
