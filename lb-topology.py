@@ -31,6 +31,7 @@ from mininet.cli import CLI
 from mininet.log import setLogLevel
 from mininet.link import Link, TCLink
 from bottle import route, run
+import threading
 
 net = Mininet(controller=RemoteController, link=TCLink)
 
@@ -58,8 +59,8 @@ def create_topo():
     for i in range(3):
         servers.append(net.addHost('srv{}'.format(i+1), ip='192.168.99.{}/24'.format(i+1), cpu=0.05, defaultRoute='via 192.168.99.99', privateDirs=private_dirs))
         net.addLink(servers[i], switches[1], bw=10)
-        servers[i].cmd('truncate -s 1m /etc/sdn/1mb_from_srv{0}.file'.format(i+1)) if i==0 else servers[i].cmd('truncate -s {0}m ~/sdn/srv{1}/{0}mb_from_srv{1}.file'.format((i+1)*10,(i+1)))
-        servers[i].cmd('cd /etc/sdn/ |  python -m SimpleHTTPServer 8080 &')
+        servers[i].cmd('truncate -s 1m /etc/sdn/data.file') if i==0 else servers[i].cmd('truncate -s {}m /etc/sdn/data.file'.format((i+1)*10))
+        servers[i].popen('python -u -m http_server &')
         servers[i].cmd('route add default dev srv{}-eth0'.format(i+1))
         servers[i].cmd('(while sleep 1; do (ps --no-headers -p $(pgrep -f mininet:srv{0} | head -1) -o %cpu > /etc/sdn/cpu) ; done) &'.format(i+1))
     c0 = net.addController('c0', controller=RemoteController, ip='192.168.152.137', port=6633)
@@ -67,8 +68,7 @@ def create_topo():
     c0.start()
     switches[0].start([c0])
     switches[1].start([c0])
-#    CLI(net)
-    run(host='192.168.152.168', port=8080)
+    CLI(net)
     net.stop()
 
 @route('/stats/servers/<node>/cpu')
@@ -78,4 +78,7 @@ def calc_cpu(node):
 
 if __name__ == '__main__':
     setLogLevel('info')
+    rest_thread = threading.Thread(target=run, kwargs={'host':'192.168.152.169', 'port':1080})
+    rest_thread.daemon = True
+    rest_thread.start()
     create_topo()
