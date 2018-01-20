@@ -30,13 +30,14 @@ from mininet.nodelib import NAT
 from mininet.cli import CLI
 from mininet.log import setLogLevel
 from mininet.link import Link, TCLink
+from bottle import route, run
 
+net = Mininet(controller=RemoteController, link=TCLink)
 
 def create_topo():
-    net = Mininet(controller=RemoteController, link=TCLink)
     switches = list()
-    switches.append(net.addSwitch('s0'))
-    switches.append(net.addSwitch('s1'))
+    switches.append(net.addSwitch('s0', dpid='1'))
+    switches.append(net.addSwitch('s1', dpid='2'))
 
     # Add node responsible for NAT service
     host_int = 'nat-eth0'
@@ -60,14 +61,20 @@ def create_topo():
         servers[i].cmd('truncate -s 1m /etc/sdn/1mb_from_srv{0}.file'.format(i+1)) if i==0 else servers[i].cmd('truncate -s {0}m ~/sdn/srv{1}/{0}mb_from_srv{1}.file'.format((i+1)*10,(i+1)))
         servers[i].cmd('cd /etc/sdn/ |  python -m SimpleHTTPServer 8080 &')
         servers[i].cmd('route add default dev srv{}-eth0'.format(i+1))
-        servers[i].cmd('(while sleep 1; do (ps --no-headers -p $(pgrep -f mininet:srv{0} | head -1) -o %cpu > /etc/sdn/cpu_srv{0}) ; done) &'.format(i+1))
+        servers[i].cmd('(while sleep 1; do (ps --no-headers -p $(pgrep -f mininet:srv{0} | head -1) -o %cpu > /etc/sdn/cpu) ; done) &'.format(i+1))
     c0 = net.addController('c0', controller=RemoteController, ip='192.168.152.137', port=6633)
     net.build()
     c0.start()
     switches[0].start([c0])
     switches[1].start([c0])
-    CLI(net)
+#    CLI(net)
+    run(host='192.168.152.168', port=8080)
     net.stop()
+
+@route('/stats/servers/<node>/cpu')
+def calc_cpu(node):
+    res = net.get(node).cmd('cat /etc/sdn/cpu')
+    return res 
 
 if __name__ == '__main__':
     setLogLevel('info')
