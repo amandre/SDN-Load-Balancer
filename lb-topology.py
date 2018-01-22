@@ -4,8 +4,9 @@
 Topology consists of 5 hosts connected with 3 HTTP servers via switch.
 It uses the remote Ryu controller located on a different machine.
 The HTTP servers are located in separated subnet and the users connect to them using Virtual IP.
-switch is responsible for balancing the traffic based on the commands from the controller.
-Ryu controller sends commands concerning free capacities on links and the CPU usages of HTTP servers.
+The switch is responsible for balancing the traffic based on the commands from the controller.
+Ryu controller sends commands concerning CPU and memory usages of HTTP servers.
+While any host tries to send the request to Virtual IP (10.0.0.100), Ryu controller redirects the traffic to the least congested server.
 
            h1   h2  h3  h4  h5
            |    |   |   |   |
@@ -34,6 +35,7 @@ from bottle import route, run
 import threading
 import netifaces as ni
 import subprocess
+import re
 
 net = Mininet(controller=RemoteController, link=TCLink)
 
@@ -52,7 +54,6 @@ def create_topo():
     net.addLink(nat, switches[0], bw=50, intfName1=host_int)
     net.addLink(nat, switches[1], bw=50, intfName1=srv_int)
     nat.setIP('192.168.99.99', 24, srv_int)
-    nat.setIP('10.0.0.100', 8, host_int)
     
     private_dirs = [ '/var/log', '/var/run', '/etc/sdn/' ]
     servers = []
@@ -63,6 +64,7 @@ def create_topo():
         servers[i].popen('python -m http_server &')
         servers[i].cmd('route add default dev srv{}-eth0'.format(i+1))
         servers[i].cmd('(while sleep 1; do (ps --no-headers -p $(pgrep -f mininet:srv{0} | head -1) -o %cpu > /etc/sdn/cpu) ; done) &'.format(i+1))
+        servers[i].cmd('(while sleep 1; do (ps --no-headers -p $(pgrep -f mininet:srv{0} | head -1) -o %mem > /etc/sdn/mem) ; done) &'.format(i+1))
 
     hosts = []
     for i in range(5):
@@ -79,10 +81,19 @@ def create_topo():
     CLI(net)
     net.stop()
 
-@route('/stats/servers/<node>/cpu')
-def calc_cpu(node):
-    res = net.get(node).cmd('cat /etc/sdn/cpu')
-    return res 
+@route('/stats/servers/')
+def calc_cpu():
+    params_dict = {}
+    for i in range(3):
+	cpu = net.get('srv{}'.format(i+1)).cmd('cat /etc/sdn/cpu')
+	cpu = re.findall('\d+\.\d+', cpu)[0]
+	mem = net.get('srv{}'.format(i+1)).cmd('cat /etc/sdn/mem')
+	mem = re.findall('\d+\.\d+', mem)[0]
+	mac = net.get('srv{}'.format(i+1)).MAC()
+	data = {"id": i+1, "name": "srv{}".format(i+1), "cpu":cpu, "mem":mem, "mac":mac}
+    	params_dict[i] = data
+    return params_dict
+
 
 if __name__ == '__main__':
     setLogLevel('info')
