@@ -24,6 +24,7 @@ from ryu.lib.packet import packet
 from ryu.lib.packet import ethernet
 from ryu.lib.packet import ether_types
 import requests
+from random import randint
 
 class SimpleSwitch13(app_manager.RyuApp):
     OFP_VERSIONS = [ofproto_v1_3.OFP_VERSION]
@@ -66,8 +67,11 @@ class SimpleSwitch13(app_manager.RyuApp):
         datapath.send_msg(mod)
 
     def get_srv_data(self):
-        response = requests.get('http://192.168.152.179:8080/stats/servers/')
-	return response.json()
+	try:
+            response = requests.get('http://192.168.152.179:8080/stats/servers/')
+	    return response.json()
+	except ValueError:
+	    raise 'Cannot retrieve JSON data, too many requests'
 
     def get_port_data(self,dpid):
 	data = list()
@@ -76,24 +80,37 @@ class SimpleSwitch13(app_manager.RyuApp):
 	   data.append(response.json())
 	return data
 
-    def balance_traffic(self):
-	data = self.get_srv_data()
+    def balance_traffic(self,dpid):
+	srv_data = self.get_srv_data()
+#	port_data = self.get_port_data(dpid)
 	tmp_mem = 100.0
 	tmp_cpu = 100.0
 	tmp_mac = 'ff:ff:ff:ff:ff:ff'
-	for d in data:
-	   cpu = float(data[d]['cpu'])
-	   mem = float(data[d]['mem'])
-	   mac = data[d]['mac']
+	i = 1
+	macs = list()
+	for d in srv_data:
+	   cpu = float(srv_data[d]['cpu'])
+	   mem = float(srv_data[d]['mem'])
+	   mac = srv_data[d]['mac']
 	   if mem < tmp_mem:
 		tmp_mem = mem
 		tmp_cpu = cpu
 		tmp_mac = mac
+		macs.append(mac)
 	   elif mem == tmp_mem:
 		if cpu < tmp_cpu:
 		   tmp_mem = mem
 		   tmp_cpu = cpu
 		   tmp_mac = mac
+		elif cpu == tmp_cpu:
+		   i += 1
+		   macs.append(mac)
+	if i==2:
+	    v = randint(1,2)
+	    tmp_mac = macs[v-1]
+	elif i==3:
+	    v = randint(1,3)
+	    tmp_mac = macs[v-1]
 	return tmp_mac
 
 
@@ -122,7 +139,7 @@ class SimpleSwitch13(app_manager.RyuApp):
 	for p in pkt:
 	    if p.protocol_name == 'arp' and p.dst_ip == '10.0.0.100':
 		print 'RECEIVED HTTP REQUEST TO LOAD BALANCER - Processing...'	
-		dst = self.balance_traffic()
+		dst = self.balance_traffic(dpid)
 	    else:
 	        dst = eth.dst
         src = eth.src
