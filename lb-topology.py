@@ -91,6 +91,8 @@ def calc_cpu():
 	mem = re.findall('\d+\.\d+', mem)[0]
 	mac = net.get('srv{}'.format(i+1)).MAC()
 	data = {"id": i+1, "name": "srv{}".format(i+1), "cpu":cpu, "mem":mem, "mac":mac}
+	ip  = net.get('srv{}'.format(i+1)).IP()
+        data = {"id": i+1, "name": "srv{}".format(i+1), "cpu":cpu, "mem":mem, "mac":mac, "ip":ip}
     	params_dict[i] = data
     return params_dict
 
