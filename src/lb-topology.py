@@ -71,7 +71,7 @@ def create_topo():
         hosts.append(net.addHost('h{}'.format(i+1), ip='10.0.0.{}/24'.format(i+1), cpu=0.05, defaultRoute='via 10.0.0.99', privateDirs=private_dirs))
         net.addLink(hosts[i], switches[0], bw=10)
         hosts[i].cmd('route add default dev h{}-eth0'.format(i+1))
-	hosts[i].popen('python -m http_getter &')
+        hosts[i].popen('python -m http_getter &')
 
     c0 = net.addController('c0', controller=RemoteController, ip='192.168.152.137', port=6633)
     net.build()
@@ -85,15 +85,15 @@ def create_topo():
 def calc_cpu():
     params_dict = {}
     for i in range(3):
-	cpu = net.get('srv{}'.format(i+1)).cmd('cat /etc/sdn/cpu')
-	cpu = re.findall('\d+\.\d+', cpu)[0]
-	mem = net.get('srv{}'.format(i+1)).cmd('cat /etc/sdn/mem')
-	mem = re.findall('\d+\.\d+', mem)[0]
-	mac = net.get('srv{}'.format(i+1)).MAC()
-	data = {"id": i+1, "name": "srv{}".format(i+1), "cpu":cpu, "mem":mem, "mac":mac}
-	ip  = net.get('srv{}'.format(i+1)).IP()
+        cpu = net.get('srv{}'.format(i+1)).cmd('cat /etc/sdn/cpu')
+        cpu = re.findall('\d+\.\d+', cpu)[0]
+        mem = net.get('srv{}'.format(i+1)).cmd('cat /etc/sdn/mem')
+        mem = re.findall('\d+\.\d+', mem)[0]
+        mac = net.get('srv{}'.format(i+1)).MAC()
+        data = {"id": i+1, "name": "srv{}".format(i+1), "cpu":cpu, "mem":mem, "mac":mac}
+        ip  = net.get('srv{}'.format(i+1)).IP()
         data = {"id": i+1, "name": "srv{}".format(i+1), "cpu":cpu, "mem":mem, "mac":mac, "ip":ip}
-    	params_dict[i] = data
+        params_dict[i] = data
     return params_dict
 
 
