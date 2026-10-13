@@ -6,9 +6,27 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# RUN pip install --no-cache-dir "setuptools==68.2.2" wheel
 
-COPY src/ ./src/
+# Install application dependencies
+#COPY requirements.txt .
 
-CMD ["python", "src/lb-topology.py"]
+#RUN apt-get update && \
+#    apt-get install -y --no-install-recommends git && \
+#    pip install --no-cache-dir -r requirements.txt && \
+#    apt-get purge -y --auto-remove git && \
+#    rm -rf /var/lib/apt/lists/*
+
+# Create an unprivileged user
+RUN groupadd --system app && \
+    useradd --system --gid app \
+    --home-dir /app \
+    --no-create-home \
+    --shell /usr/sbin/nologin \
+    app
+
+#COPY --chown=app:app src/ ./src/
+USER app
+
+CMD ["python", "-c", "print('Hello, World!')"]
+#CMD ["python", "src/lb-topology.py"]

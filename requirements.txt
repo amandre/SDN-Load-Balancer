@@ -2,4 +2,4 @@ bottle==0.13.4
 mininet==2.3.0.dev6
 netifaces==0.11.0
 Requests==2.34.2
-ryu==4.34
+git+https://github.com/faucetsdn/ryu.git@4770157
