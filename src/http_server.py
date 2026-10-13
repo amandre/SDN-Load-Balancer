@@ -9,5 +9,5 @@ directory = os.path.join(os.path.dirname(__file__), '/etc/sdn')
 os.chdir(directory)
 TCPServer.allow_reuse_address = True
 httpd = TCPServer(("", port), SimpleHTTPRequestHandler)
-print 'Starting HTTP Server on port', port, '...'
+print ('Starting HTTP Server on port', port, '...')
 httpd.serve_forever()
