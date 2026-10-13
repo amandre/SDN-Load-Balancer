@@ -32,7 +32,7 @@ jobs:
           cache-to: type=gha,scope=sdn-lb,mode=max
 
   publish:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
 
     permissions:
